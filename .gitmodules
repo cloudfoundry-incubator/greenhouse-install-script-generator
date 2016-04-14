@@ -16,12 +16,12 @@
 [submodule "src/github.com/akavel/rsrc"]
 	path = src/github.com/akavel/rsrc
 	url = https://github.com/akavel/rsrc
-[submodule "src/github.com/cloudfoundry-incubator/candiedyaml"]
-	path = src/github.com/cloudfoundry-incubator/candiedyaml
-	url = https://github.com/cloudfoundry-incubator/candiedyaml.git
 [submodule "src/golang.org/x/oauth2"]
 	path = src/golang.org/x/oauth2
 	url = https://github.com/golang/oauth2
 [submodule "src/golang.org/x/net"]
 	path = src/golang.org/x/net
 	url = https://github.com/golang/net
+[submodule "src/gopkg.in/yaml.v2"]
+	path = src/gopkg.in/yaml.v2
+	url = https://github.com/pivotal-golang/yaml

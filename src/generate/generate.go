@@ -21,7 +21,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/cloudfoundry-incubator/candiedyaml"
+	"gopkg.in/yaml.v2"
 
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/oauth2"
@@ -109,11 +109,9 @@ func main() {
 
 	deployment := models.ShowDeployment{}
 	json.NewDecoder(response.Body).Decode(&deployment)
-	buf := bytes.NewBufferString(deployment.Manifest)
 	var manifest models.Manifest
 
-	decoder := candiedyaml.NewDecoder(buf)
-	err = decoder.Decode(&manifest)
+	err = yaml.Unmarshal([]byte(deployment.Manifest), &manifest)
 	if err != nil {
 		FailOnError(err)
 	}
