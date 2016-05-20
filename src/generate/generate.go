@@ -143,10 +143,14 @@ func fillMachineIp(args *models.InstallerArguments, manifest models.Manifest, ma
 func fillSharedSecret(args *models.InstallerArguments, manifest models.Manifest) {
 	repJob := firstRepJob(manifest)
 	properties := repJob.Properties
-	if properties.MetronEndpoint == nil {
+	if properties.MetronEndpoint == nil && properties.LoggregatorEndpoint == nil {
 		properties = manifest.Properties
 	}
-	args.SharedSecret = properties.MetronEndpoint.SharedSecret
+	if properties.MetronEndpoint != nil {
+		args.SharedSecret = properties.MetronEndpoint.SharedSecret
+	} else if properties.LoggregatorEndpoint != nil {
+		args.SharedSecret = properties.LoggregatorEndpoint.SharedSecret
+	}
 }
 
 func fillMetronAgent(args *models.InstallerArguments, manifest models.Manifest, outputDir string) {

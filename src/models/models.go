@@ -63,7 +63,7 @@ type LoggregatorProperties struct {
 		Machines []string `yaml:"machines"`
 	} `yaml:"etcd"`
 	Tls struct {
-		CA string `yaml:"ca"`
+		CA     string `yaml:"ca"`
 		CACert string `yaml:"ca_cert"`
 	} `yaml:"tls"`
 }
@@ -74,11 +74,11 @@ type MetronEndpoint struct {
 
 type MetronAgent struct {
 	PreferredProtocol *string `yaml:"preferred_protocol"`
-	Tls struct {
+	Tls               struct {
 		ClientCert string `yaml:"client_cert"`
 		ClientKey  string `yaml:"client_key"`
 	} `yaml:"tls"`
-	TlsClient         struct {
+	TlsClient struct {
 		Cert string `yaml:"cert"`
 		Key  string `yaml:"key"`
 	} `yaml:"tls_client"`
@@ -90,12 +90,13 @@ type SyslogProperties struct {
 }
 
 type Properties struct {
-	Consul         *ConsulProperties      `yaml:"consul"`
-	Diego          *DiegoProperties       `yaml:"diego"`
-	Loggregator    *LoggregatorProperties `yaml:"loggregator"`
-	MetronEndpoint *MetronEndpoint        `yaml:"metron_endpoint"`
-	MetronAgent    *MetronAgent           `yaml:"metron_agent"`
-	Syslog         *SyslogProperties      `yaml:"syslog_daemon_config"`
+	Consul              *ConsulProperties      `yaml:"consul"`
+	Diego               *DiegoProperties       `yaml:"diego"`
+	Loggregator         *LoggregatorProperties `yaml:"loggregator"`
+	MetronEndpoint      *MetronEndpoint        `yaml:"metron_endpoint"`
+	LoggregatorEndpoint *MetronEndpoint        `yaml:"loggregator_endpoint"`
+	MetronAgent         *MetronAgent           `yaml:"metron_agent"`
+	Syslog              *SyslogProperties      `yaml:"syslog_daemon_config"`
 }
 
 type Job struct {
