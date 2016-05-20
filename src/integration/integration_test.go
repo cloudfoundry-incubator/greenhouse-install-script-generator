@@ -126,8 +126,6 @@ func StartGeneratorWithURL(serverUrl string) (*gexec.Session, string) {
 }
 
 func StartGeneratorWithArgs(args ...string) *gexec.Session {
-	generatePath, err := gexec.Build("generate")
-	Expect(err).NotTo(HaveOccurred())
 	command := exec.Command(generatePath, args...)
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
