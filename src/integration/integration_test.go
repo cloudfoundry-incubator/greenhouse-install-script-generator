@@ -656,6 +656,24 @@ var _ = Describe("Generate", func() {
 					Expect(script).To(Equal(expectedContent))
 				})
 			})
+
+			Context("BOSH 2.0 manifests", func() {
+				BeforeEach(func() {
+					manifestYaml = "two_point_oh_manifest.yml"
+				})
+
+				It("picks up properties from instance_groups", func() {
+					expectedContent := ExpectedContent(models.InstallerArguments{
+						ConsulRequireSSL: true,
+						SyslogHostIP:     "logs2.test.com",
+						BbsRequireSsl:    true,
+						Username:         "admin",
+						Password:         `"""password"""`,
+						ConsulDomain:     "cf.internal",
+					})
+					Expect(script).To(Equal(expectedContent))
+				})
+			})
 		})
 
 		Context("with an optional machine IP", func() {

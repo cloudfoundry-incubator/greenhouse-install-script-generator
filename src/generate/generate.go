@@ -254,6 +254,10 @@ func fillEtcdCluster(args *models.InstallerArguments, manifest models.Manifest) 
 
 func firstRepJob(manifest models.Manifest) models.Job {
 	jobs := manifest.Jobs
+	if len(jobs) == 0 {
+		// 2.0 Manifest
+		jobs = manifest.InstanceGroups
+	}
 
 	for _, job := range jobs {
 		if job.Properties.Diego != nil && job.Properties.Diego.Rep != nil {
