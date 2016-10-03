@@ -103,9 +103,3 @@ type Job struct {
 	Name       string      `yaml:"name"`
 	Properties *Properties `yaml:"properties"`
 }
-
-type Manifest struct {
-	Jobs           []Job       `yaml:"jobs"`
-	Properties     *Properties `yaml:"properties"`
-	InstanceGroups []Job       `yaml:"instance_groups"`
-}

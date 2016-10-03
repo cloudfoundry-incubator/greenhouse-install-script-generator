@@ -118,7 +118,7 @@ func main() {
 
 	args := models.InstallerArguments{}
 
-	fillEtcdCluster(&args, manifest)
+	manifest.FillEtcdCluster(&args)
 	fillSharedSecret(&args, manifest)
 	fillMetronAgent(&args, manifest, *outputDir)
 	fillSyslog(&args, manifest)
@@ -240,16 +240,6 @@ func fillConsul(args *models.InstallerArguments, manifest models.Manifest, outpu
 	} else {
 		args.ConsulDomain = "cf.internal"
 	}
-}
-
-func fillEtcdCluster(args *models.InstallerArguments, manifest models.Manifest) {
-	repJob := firstRepJob(manifest)
-	properties := repJob.Properties
-	if properties.Loggregator == nil {
-		properties = manifest.Properties
-	}
-
-	args.EtcdCluster = properties.Loggregator.Etcd.Machines[0]
 }
 
 func firstRepJob(manifest models.Manifest) models.Job {
