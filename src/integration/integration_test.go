@@ -381,23 +381,6 @@ var _ = Describe("Generate", func() {
 				})
 			})
 
-			Context("when the deployment has a empty syslog deamon config", func() {
-				BeforeEach(func() {
-					manifestYaml = "syslog_with_empty_config.yml"
-				})
-
-				It("contains all the MSI parameters", func() {
-					expectedContent := ExpectedContent(models.InstallerArguments{
-						ConsulRequireSSL: true,
-						BbsRequireSsl:    true,
-						Username:         "admin",
-						Password:         `"""password"""`,
-						ConsulDomain:     "cf.internal",
-					})
-					Expect(script).To(Equal(expectedContent))
-				})
-			})
-
 			Context("when the server returns a one zone manifest", func() {
 				JustBeforeEach(func() {
 					manifestYaml = "one_zone_manifest.yml"

@@ -4,9 +4,7 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha1"
 	"crypto/tls"
-	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -20,10 +18,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"yaml"
 
-	"gopkg.in/yaml.v2"
-
-	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/oauth2"
 
 	"models"
@@ -159,46 +155,6 @@ func fillBBS(args *models.InstallerArguments, manifest models.Manifest, outputDi
 	}
 }
 
-func stringToEncryptKey(str string) string {
-	decodedStr, err := base64.StdEncoding.DecodeString(str)
-	if err == nil && len(decodedStr) == 16 {
-		return str
-	}
-
-	key := pbkdf2.Key([]byte(str), nil, 20000, 16, sha1.New)
-	return base64.StdEncoding.EncodeToString(key)
-}
-
-func fillConsul(args *models.InstallerArguments, manifest models.Manifest, outputDir string) {
-	repJob := firstRepJob(manifest)
-	properties := repJob.Properties
-	if properties.Consul == nil {
-		properties = manifest.Properties
-	}
-
-	consuls := properties.Consul.Agent.Servers.Lan
-
-	if len(consuls) == 0 {
-		fmt.Fprintf(os.Stderr, "Could not find any Consul VMs in your BOSH deployment")
-		os.Exit(1)
-	}
-
-	args.ConsulIPs = strings.Join(consuls, ",")
-
-	// missing requireSSL implies true
-	requireSSL := properties.Consul.RequireSSL
-	if requireSSL == nil || *requireSSL != "false" {
-		args.ConsulRequireSSL = true
-		extractConsulKeyAndCert(properties, outputDir)
-	}
-
-	if properties.Consul.Agent.Domain != "" {
-		args.ConsulDomain = properties.Consul.Agent.Domain
-	} else {
-		args.ConsulDomain = "cf.internal"
-	}
-}
-
 func firstRepJob(manifest models.Manifest) models.Job {
 	jobs := manifest.Jobs
 	if len(jobs) == 0 {
@@ -213,22 +169,6 @@ func firstRepJob(manifest models.Manifest) models.Job {
 
 	}
 	panic("no rep jobs found")
-}
-
-func extractConsulKeyAndCert(properties *models.Properties, outputDir string) {
-	encryptKey := stringToEncryptKey(properties.Consul.EncryptKeys[0])
-
-	for key, filename := range map[string]string{
-		properties.Consul.AgentCert: "consul_agent.crt",
-		properties.Consul.AgentKey:  "consul_agent.key",
-		properties.Consul.CACert:    "consul_ca.crt",
-		encryptKey:                  "consul_encrypt.key",
-	} {
-		err := ioutil.WriteFile(path.Join(outputDir, filename), []byte(key), 0644)
-		if err != nil {
-			FailOnError(err)
-		}
-	}
 }
 
 func extractBbsKeyAndCert(properties *models.Properties, outputDir string) {

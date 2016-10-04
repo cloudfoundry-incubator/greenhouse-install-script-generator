@@ -142,4 +142,50 @@ var _ = Describe("InstallerArguments", func() {
 			})
 		})
 	})
+
+	Describe("FillSyslog", func() {
+		const address = "http://google.com"
+		const port = "2042"
+
+		It("does not set syslog when the manifest doesnt have syslog", func() {
+			args, err := NewInstallerArguments(&manifest)
+			Expect(err).To(BeNil())
+
+			args.FillSyslog()
+			Expect(args.SyslogHostIP).To(BeEmpty())
+			Expect(args.SyslogPort).To(BeEmpty())
+		})
+
+		Context("when the job has syslog properties", func() {
+			It("sets syslog ip and port", func() {
+				repJob.Properties.Syslog = &SyslogProperties{
+					Address: address,
+					Port:    port,
+				}
+
+				args, err := NewInstallerArguments(&manifest)
+				Expect(err).To(BeNil())
+
+				args.FillSyslog()
+				Expect(args.SyslogHostIP).To(Equal(address))
+				Expect(args.SyslogPort).To(Equal(port))
+			})
+		})
+
+		Context("when the global properties specify syslog", func() {
+			It("sets syslog ip and port", func() {
+				manifest.Properties.Syslog = &SyslogProperties{
+					Address: address,
+					Port:    port,
+				}
+
+				args, err := NewInstallerArguments(&manifest)
+				Expect(err).To(BeNil())
+
+				args.FillSyslog()
+				Expect(args.SyslogHostIP).To(Equal(address))
+				Expect(args.SyslogPort).To(Equal(port))
+			})
+		})
+	})
 })
