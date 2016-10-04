@@ -125,7 +125,7 @@ func main() {
 	args.FillSharedSecret()
 	args.FillMetronAgent()
 	args.FillSyslog()
-	fillConsul(args, manifest, *outputDir)
+	args.FillConsul()
 
 	fillMachineIp(args, manifest, *machineIp)
 

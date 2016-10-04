@@ -1,5 +1,15 @@
 package models
 
+import (
+	"crypto/sha1"
+	"encoding/base64"
+	"fmt"
+	"os"
+	"strings"
+
+	"golang.org/x/crypto/pbkdf2"
+)
+
 type InstallerArguments struct {
 	repJob           *Job
 	manifest         *Manifest
@@ -87,4 +97,48 @@ func (a *InstallerArguments) FillSyslog() {
 
 	a.SyslogHostIP = properties.Syslog.Address
 	a.SyslogPort = properties.Syslog.Port
+}
+
+func stringToEncryptKey(str string) string {
+	decodedStr, err := base64.StdEncoding.DecodeString(str)
+	if err == nil && len(decodedStr) == 16 {
+		return str
+	}
+
+	key := pbkdf2.Key([]byte(str), nil, 20000, 16, sha1.New)
+	return base64.StdEncoding.EncodeToString(key)
+}
+
+func (a *InstallerArguments) FillConsul() {
+	properties := a.repJob.Properties
+	if properties.Consul == nil {
+		properties = a.manifest.Properties
+	}
+
+	consuls := properties.Consul.Agent.Servers.Lan
+
+	if len(consuls) == 0 {
+		fmt.Fprintf(os.Stderr, "Could not find any Consul VMs in your BOSH deployment")
+		os.Exit(1)
+	}
+
+	a.ConsulIPs = strings.Join(consuls, ",")
+
+	// missing requireSSL implies true
+	requireSSL := properties.Consul.RequireSSL
+	if requireSSL == nil || *requireSSL != "false" {
+		a.ConsulRequireSSL = true
+		encryptKey := stringToEncryptKey(properties.Consul.EncryptKeys[0])
+
+		a.Certs["consul_agent.crt"] = properties.Consul.AgentCert
+		a.Certs["consul_agent.key"] = properties.Consul.AgentKey
+		a.Certs["consul_ca.crt"] = properties.Consul.CACert
+		a.Certs["consul_encrypt.key"] = encryptKey
+	}
+
+	if properties.Consul.Agent.Domain != "" {
+		a.ConsulDomain = properties.Consul.Agent.Domain
+	} else {
+		a.ConsulDomain = "cf.internal"
+	}
 }
