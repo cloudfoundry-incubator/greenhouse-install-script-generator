@@ -116,18 +116,21 @@ func main() {
 		FailOnError(err)
 	}
 
-	args := models.InstallerArguments{}
+	args, err := models.NewInstallerArguments(&manifest)
+	if err != nil {
+		FailOnError(err)
+	}
 
-	manifest.FillEtcdCluster(&args)
-	fillSharedSecret(&args, manifest)
-	fillMetronAgent(&args, manifest, *outputDir)
-	fillSyslog(&args, manifest)
-	fillConsul(&args, manifest, *outputDir)
+	args.FillEtcdCluster()
+	args.FillSharedSecret()
+	fillMetronAgent(args, manifest, *outputDir)
+	fillSyslog(args, manifest)
+	fillConsul(args, manifest, *outputDir)
 
-	fillMachineIp(&args, manifest, *machineIp)
+	fillMachineIp(args, manifest, *machineIp)
 
-	fillBBS(&args, manifest, *outputDir)
-	generateInstallScript(*outputDir, args)
+	fillBBS(args, manifest, *outputDir)
+	generateInstallScript(*outputDir, *args)
 }
 
 func fillMachineIp(args *models.InstallerArguments, manifest models.Manifest, machineIp string) {
@@ -138,19 +141,6 @@ func fillMachineIp(args *models.InstallerArguments, manifest models.Manifest, ma
 		machineIp = strings.Split(conn.LocalAddr().String(), ":")[0]
 	}
 	args.MachineIp = machineIp
-}
-
-func fillSharedSecret(args *models.InstallerArguments, manifest models.Manifest) {
-	repJob := firstRepJob(manifest)
-	properties := repJob.Properties
-	if properties.MetronEndpoint == nil && properties.LoggregatorEndpoint == nil {
-		properties = manifest.Properties
-	}
-	if properties.MetronEndpoint != nil {
-		args.SharedSecret = properties.MetronEndpoint.SharedSecret
-	} else if properties.LoggregatorEndpoint != nil {
-		args.SharedSecret = properties.LoggregatorEndpoint.SharedSecret
-	}
 }
 
 func fillMetronAgent(args *models.InstallerArguments, manifest models.Manifest, outputDir string) {

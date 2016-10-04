@@ -1,5 +1,7 @@
 package models
 
+import "errors"
+
 type Release struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
@@ -14,20 +16,25 @@ type ShowDeployment struct {
 	Manifest string `json:"manifest"`
 }
 
-type InstallerArguments struct {
-	ConsulRequireSSL bool
-	ConsulIPs        string
-	EtcdCluster      string
-	Zone             string
-	SharedSecret     string
-	Username         string
-	Password         string
-	SyslogHostIP     string
-	SyslogPort       string
-	BbsRequireSsl    bool
-	MachineIp        string
-	MetronPreferTLS  bool
-	ConsulDomain     string
+type Manifest struct {
+	Jobs           []Job       `yaml:"jobs"`
+	Properties     *Properties `yaml:"properties"`
+	InstanceGroups []Job       `yaml:"instance_groups"`
+}
+
+func (m *Manifest) FirstRepJob() (*Job, error) {
+	jobs := m.Jobs
+	if len(jobs) == 0 {
+		// 2.0 Manifest
+		jobs = m.InstanceGroups
+	}
+
+	for _, job := range jobs {
+		if job.Properties.Diego != nil && job.Properties.Diego.Rep != nil {
+			return &job, nil
+		}
+	}
+	return nil, errors.New("no rep job found")
 }
 
 type ConsulProperties struct {
