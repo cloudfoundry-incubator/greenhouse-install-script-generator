@@ -8,6 +8,27 @@ import (
 )
 
 var _ = Describe("InstallerArguments", func() {
+	var (
+		repJob   Job
+		manifest Manifest
+	)
+	BeforeEach(func() {
+		repJob = Job{
+			Properties: &Properties{
+				Diego: &DiegoProperties{
+					Rep: &Rep{},
+				},
+			},
+		}
+		manifest = Manifest{
+			Jobs: []Job{repJob},
+			Properties: &Properties{
+				MetronAgent: &MetronAgent{},
+				Loggregator: &LoggregatorProperties{},
+			},
+		}
+	})
+
 	Describe("NewInstallerArguments", func() {
 		It("errors when there are no rep jobs in the manifest", func() {
 			manifest := Manifest{
@@ -19,25 +40,7 @@ var _ = Describe("InstallerArguments", func() {
 	})
 
 	Describe("FillSharedSecret", func() {
-		var (
-			repJob   Job
-			manifest Manifest
-		)
 		const sharedSecret = "foo"
-
-		BeforeEach(func() {
-			repJob = Job{
-				Properties: &Properties{
-					Diego: &DiegoProperties{
-						Rep: &Rep{},
-					},
-				},
-			}
-			manifest = Manifest{
-				Jobs:       []Job{repJob},
-				Properties: &Properties{},
-			}
-		})
 
 		It("works when the job uses the legacy loggregator_endpoint property", func() {
 			repJob.Properties.LoggregatorEndpoint = &MetronEndpoint{
@@ -81,6 +84,62 @@ var _ = Describe("InstallerArguments", func() {
 
 			args.FillSharedSecret()
 			Expect(args.SharedSecret).To(Equal(sharedSecret))
+		})
+	})
+
+	Describe("FillMetronAgent", func() {
+		It("does not copy certs when TLS is not the preferred protocol", func() {
+			tcp := "tcp"
+			manifest.Properties.MetronAgent.PreferredProtocol = &tcp
+
+			args, err := NewInstallerArguments(&manifest)
+			Expect(err).To(BeNil())
+
+			args.FillMetronAgent()
+			Expect(args.Certs).To(BeEmpty())
+			Expect(args.MetronPreferTLS).To(BeFalse())
+		})
+
+		Context("new style loggregator properties", func() {
+			It("copies certs from the manifest when TLS is enabled", func() {
+				tls := "tls"
+				manifest.Properties.MetronAgent.PreferredProtocol = &tls
+				manifest.Properties.Loggregator.Tls = Tls{CACert: "cacert"}
+				manifest.Properties.MetronAgent.Tls = Tls{
+					ClientKey:  "clientkey",
+					ClientCert: "clientcert",
+				}
+
+				args, err := NewInstallerArguments(&manifest)
+				Expect(err).To(BeNil())
+
+				args.FillMetronAgent()
+				Expect(args.Certs["metron_agent.crt"]).To(Equal("clientcert"))
+				Expect(args.Certs["metron_agent.key"]).To(Equal("clientkey"))
+				Expect(args.Certs["metron_ca.crt"]).To(Equal("cacert"))
+				Expect(args.MetronPreferTLS).To(BeTrue())
+			})
+		})
+
+		Context("old style loggregator properties", func() {
+			It("copies certs from the manifest when TLS is enabled", func() {
+				tls := "tls"
+				manifest.Properties.MetronAgent.PreferredProtocol = &tls
+				manifest.Properties.Loggregator.Tls = Tls{CA: "cacert"}
+				manifest.Properties.MetronAgent.TlsClient = Tls{
+					Key:  "clientkey",
+					Cert: "clientcert",
+				}
+
+				args, err := NewInstallerArguments(&manifest)
+				Expect(err).To(BeNil())
+
+				args.FillMetronAgent()
+				Expect(args.Certs["metron_agent.crt"]).To(Equal("clientcert"))
+				Expect(args.Certs["metron_agent.key"]).To(Equal("clientkey"))
+				Expect(args.Certs["metron_ca.crt"]).To(Equal("cacert"))
+				Expect(args.MetronPreferTLS).To(BeTrue())
+			})
 		})
 	})
 })

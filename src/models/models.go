@@ -71,10 +71,15 @@ type LoggregatorProperties struct {
 	Etcd struct {
 		Machines []string `yaml:"machines"`
 	} `yaml:"etcd"`
-	Tls struct {
-		CA     string `yaml:"ca"`
-		CACert string `yaml:"ca_cert"`
-	} `yaml:"tls"`
+	Tls Tls `yaml:"tls"`
+}
+type Tls struct {
+	CA         string `yaml:"ca"`
+	CACert     string `yaml:"ca_cert"`
+	ClientCert string `yaml:"client_cert"`
+	ClientKey  string `yaml:"client_key"`
+	Cert       string `yaml:"cert"`
+	Key        string `yaml:"key"`
 }
 
 type MetronEndpoint struct {
@@ -83,14 +88,8 @@ type MetronEndpoint struct {
 
 type MetronAgent struct {
 	PreferredProtocol *string `yaml:"preferred_protocol"`
-	Tls               struct {
-		ClientCert string `yaml:"client_cert"`
-		ClientKey  string `yaml:"client_key"`
-	} `yaml:"tls"`
-	TlsClient struct {
-		Cert string `yaml:"cert"`
-		Key  string `yaml:"key"`
-	} `yaml:"tls_client"`
+	Tls               Tls     `yaml:"tls"`
+	TlsClient         Tls     `yaml:"tls_client"`
 }
 
 type SyslogProperties struct {
