@@ -58,11 +58,13 @@ type BBSProperties struct {
 	RequireSSL *bool  `yaml:"require_ssl"`
 }
 
+type Rep struct {
+	Zone string         `yaml:"zone"`
+	BBS  *BBSProperties `yaml:"bbs"`
+}
+
 type DiegoProperties struct {
-	Rep *struct {
-		Zone string         `yaml:"zone"`
-		BBS  *BBSProperties `yaml:"bbs"`
-	} `yaml:"rep"`
+	Rep *Rep `yaml:"rep"`
 }
 
 type LoggregatorProperties struct {

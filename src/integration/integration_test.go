@@ -542,24 +542,6 @@ var _ = Describe("Generate", func() {
 				})
 			})
 
-			Context("when the deployment specifies legacy properties in the job", func() {
-				BeforeEach(func() {
-					manifestYaml = "legacy_job_override_manifest.yml"
-				})
-
-				It("supports the old loggregator_endpoint property", func() {
-					expectedContent := ExpectedContent(models.InstallerArguments{
-						ConsulRequireSSL: true,
-						SyslogHostIP:     "logs2.test.com",
-						BbsRequireSsl:    true,
-						Username:         "admin",
-						Password:         `"""password"""`,
-						ConsulDomain:     "cf.internal",
-					})
-					Expect(script).To(Equal(expectedContent))
-				})
-			})
-
 			Context("when the deployment does not has metron tls enabled", func() {
 				BeforeEach(func() {
 					manifestYaml = "one_zone_manifest.yml"

@@ -16,6 +16,7 @@ type InstallerArguments struct {
 	MachineIp        string
 	MetronPreferTLS  bool
 	ConsulDomain     string
+	Certs            map[string]string
 }
 
 func NewInstallerArguments(manifest *Manifest) (*InstallerArguments, error) {
@@ -23,7 +24,11 @@ func NewInstallerArguments(manifest *Manifest) (*InstallerArguments, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &InstallerArguments{repJob: firstRepJob, manifest: manifest}, nil
+	return &InstallerArguments{
+		repJob:   firstRepJob,
+		manifest: manifest,
+		Certs:    make(map[string]string),
+	}, nil
 }
 
 func (a *InstallerArguments) FillEtcdCluster() {
@@ -45,4 +50,41 @@ func (a *InstallerArguments) FillSharedSecret() {
 	} else if properties.LoggregatorEndpoint != nil {
 		a.SharedSecret = properties.LoggregatorEndpoint.SharedSecret
 	}
+}
+
+func (a *InstallerArguments) FillMetronAgent() {
+	properties := a.repJob.Properties
+
+	if properties.MetronAgent == nil || properties.MetronAgent.PreferredProtocol == nil {
+		properties = a.manifest.Properties
+	}
+
+	if properties != nil && properties.MetronAgent != nil && properties.MetronAgent.PreferredProtocol != nil {
+		if *properties.MetronAgent.PreferredProtocol == "tls" {
+			a.MetronPreferTLS = true
+			if properties.Loggregator.Tls.CACert != "" {
+				a.Certs["metron_agent.crt"] = properties.MetronAgent.Tls.ClientCert
+				a.Certs["metron_agent.key"] = properties.MetronAgent.Tls.ClientKey
+				a.Certs["metron_ca.crt"] = properties.Loggregator.Tls.CACert
+			} else {
+				a.Certs["metron_agent.crt"] = properties.MetronAgent.TlsClient.Cert
+				a.Certs["metron_agent.key"] = properties.MetronAgent.TlsClient.Key
+				a.Certs["metron_ca.crt"] = properties.Loggregator.Tls.CA
+			}
+		}
+	}
+}
+
+func (a *InstallerArguments) FillSyslog() {
+	properties := a.repJob.Properties
+	if properties.Syslog == nil && a.manifest.Properties != nil {
+		properties = a.manifest.Properties
+	}
+
+	if properties.Syslog == nil {
+		return
+	}
+
+	a.SyslogHostIP = properties.Syslog.Address
+	a.SyslogPort = properties.Syslog.Port
 }

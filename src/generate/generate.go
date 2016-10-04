@@ -123,14 +123,15 @@ func main() {
 
 	args.FillEtcdCluster()
 	args.FillSharedSecret()
-	fillMetronAgent(args, manifest, *outputDir)
-	fillSyslog(args, manifest)
+	args.FillMetronAgent()
+	args.FillSyslog()
 	fillConsul(args, manifest, *outputDir)
 
 	fillMachineIp(args, manifest, *machineIp)
 
 	fillBBS(args, manifest, *outputDir)
 	generateInstallScript(*outputDir, *args)
+	writeCerts(*outputDir, *args)
 }
 
 func fillMachineIp(args *models.InstallerArguments, manifest models.Manifest, machineIp string) {
@@ -141,40 +142,6 @@ func fillMachineIp(args *models.InstallerArguments, manifest models.Manifest, ma
 		machineIp = strings.Split(conn.LocalAddr().String(), ":")[0]
 	}
 	args.MachineIp = machineIp
-}
-
-func fillMetronAgent(args *models.InstallerArguments, manifest models.Manifest, outputDir string) {
-	repJob := firstRepJob(manifest)
-	properties := repJob.Properties
-
-	if properties.MetronAgent == nil || properties.MetronAgent.PreferredProtocol == nil {
-		properties = manifest.Properties
-	}
-
-	if properties != nil && properties.MetronAgent != nil && properties.MetronAgent.PreferredProtocol != nil {
-		if *properties.MetronAgent.PreferredProtocol == "tls" {
-			args.MetronPreferTLS = true
-			extractMetronKeyAndCert(properties, outputDir)
-		}
-	}
-}
-
-func fillSyslog(args *models.InstallerArguments, manifest models.Manifest) {
-	repJob := firstRepJob(manifest)
-	properties := repJob.Properties
-	// TODO: this is broken on ops manager:
-	//   1. there are no global properties section
-	//   2. none of the diego jobs (including rep) has syslog_daemon_config
-	if properties.Syslog == nil && manifest.Properties != nil {
-		properties = manifest.Properties
-	}
-
-	if properties.Syslog == nil {
-		return
-	}
-
-	args.SyslogHostIP = properties.Syslog.Address
-	args.SyslogPort = properties.Syslog.Port
 }
 
 func fillBBS(args *models.InstallerArguments, manifest models.Manifest, outputDir string) {
@@ -277,23 +244,9 @@ func extractBbsKeyAndCert(properties *models.Properties, outputDir string) {
 	}
 }
 
-func extractMetronKeyAndCert(properties *models.Properties, outputDir string) {
-	var metron map[string]string
-	if properties.Loggregator.Tls.CACert != "" {
-		metron = map[string]string{
-			properties.MetronAgent.Tls.ClientCert: "metron_agent.crt",
-			properties.MetronAgent.Tls.ClientKey:  "metron_agent.key",
-			properties.Loggregator.Tls.CACert:     "metron_ca.crt",
-		}
-	} else {
-		metron = map[string]string{
-			properties.MetronAgent.TlsClient.Cert: "metron_agent.crt",
-			properties.MetronAgent.TlsClient.Key:  "metron_agent.key",
-			properties.Loggregator.Tls.CA:         "metron_ca.crt",
-		}
-	}
-	for key, filename := range metron {
-		err := ioutil.WriteFile(path.Join(outputDir, filename), []byte(key), 0644)
+func writeCerts(outputDir string, args models.InstallerArguments) {
+	for filename, cert := range args.Certs {
+		err := ioutil.WriteFile(path.Join(outputDir, filename), []byte(cert), 0644)
 		if err != nil {
 			FailOnError(err)
 		}
