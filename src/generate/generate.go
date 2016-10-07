@@ -15,6 +15,8 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"text/template"
 	"time"
@@ -53,68 +55,92 @@ msiexec /passive /norestart /i %~dp0\GardenWindows.msi ^
   SYSLOG_PORT={{.SyslogPort}}{{ end }}`
 )
 
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage of generate:\n")
+	flag.PrintDefaults()
+	os.Exit(1)
+}
+
 func main() {
-	boshServerUrl := flag.String("boshUrl", "", "Bosh URL (https://admin:admin@bosh.example:25555)")
-	outputDir := flag.String("outputDir", "", "Output directory (/tmp/scripts)")
-	machineIp := flag.String("machineIp", "", "(optional) IP address of this cell")
+	var (
+		cfManifest    string
+		outputDir     string
+		boshServerUrl string
+		machineIp     string
+	)
+	flag.StringVar(&cfManifest, "manifest", "", "Path to CF manifest file")
+	flag.StringVar(&outputDir, "outputDir", "", "Directory where the generated install script and certs will be created")
+	flag.StringVar(&boshServerUrl, "boshUrl", "", "Bosh director URL e.g. https://admin:admin@bosh.example:25555")
+	flag.StringVar(&machineIp, "machineIp", "", "(optional) IP address of this cell")
 
 	flag.Parse()
-	if *boshServerUrl == "" || *outputDir == "" {
-		fmt.Fprintf(os.Stderr, "Usage of generate:\n")
-		flag.PrintDefaults()
-		os.Exit(1)
+	if outputDir == "" || (boshServerUrl == "" && cfManifest == "") {
+		usage()
+	}
+	if boshServerUrl != "" && cfManifest != "" {
+		fmt.Fprintln(os.Stderr, "Error: only boshServerUrl or cfManifest may be specified")
+		usage()
 	}
 
-	u, _ := url.Parse(*boshServerUrl)
-
-	_, err := os.Stat(*outputDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			os.MkdirAll(*outputDir, 0755)
-		}
-	}
-
-	bosh := NewBosh(*u)
-	bosh.Authorize()
-
-	response := bosh.MakeRequest("/deployments")
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		buf := new(bytes.Buffer)
-		_, err := buf.ReadFrom(response.Body)
+	var manifest models.Manifest
+	if cfManifest != "" {
+		manifestContents, err := ioutil.ReadFile(cfManifest)
+		err = yaml.Unmarshal(manifestContents, &manifest)
 		if err != nil {
-			fmt.Printf("Could not read response from BOSH director.")
+			Fatal(err)
+		}
+	} else {
+
+		u, _ := url.Parse(boshServerUrl)
+
+		_, err := os.Stat(outputDir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				os.MkdirAll(outputDir, 0755)
+			}
+		}
+
+		bosh := NewBosh(*u)
+		bosh.Authorize()
+
+		response := bosh.MakeRequest("/deployments")
+		defer response.Body.Close()
+
+		if response.StatusCode != http.StatusOK {
+			buf := new(bytes.Buffer)
+			_, err := buf.ReadFrom(response.Body)
+			if err != nil {
+				fmt.Printf("Could not read response from BOSH director.")
+				os.Exit(1)
+			}
+
+			fmt.Fprintf(os.Stderr, "Unexpected BOSH director response: %v, %v", response.StatusCode, buf.String())
 			os.Exit(1)
 		}
 
-		fmt.Fprintf(os.Stderr, "Unexpected BOSH director response: %v, %v", response.StatusCode, buf.String())
-		os.Exit(1)
-	}
+		deployments := []models.IndexDeployment{}
+		json.NewDecoder(response.Body).Decode(&deployments)
+		idx := GetDiegoDeployment(deployments)
+		if idx == -1 {
+			fmt.Fprintf(os.Stderr, "BOSH Director does not have exactly one deployment containing a cf and diego release.")
+			os.Exit(1)
+		}
 
-	deployments := []models.IndexDeployment{}
-	json.NewDecoder(response.Body).Decode(&deployments)
-	idx := GetDiegoDeployment(deployments)
-	if idx == -1 {
-		fmt.Fprintf(os.Stderr, "BOSH Director does not have exactly one deployment containing a cf and diego release.")
-		os.Exit(1)
-	}
+		response = bosh.MakeRequest("/deployments/" + deployments[idx].Name)
+		defer response.Body.Close()
 
-	response = bosh.MakeRequest("/deployments/" + deployments[idx].Name)
-	defer response.Body.Close()
+		deployment := models.ShowDeployment{}
+		json.NewDecoder(response.Body).Decode(&deployment)
 
-	deployment := models.ShowDeployment{}
-	json.NewDecoder(response.Body).Decode(&deployment)
-	var manifest models.Manifest
-
-	err = yaml.Unmarshal([]byte(deployment.Manifest), &manifest)
-	if err != nil {
-		FailOnError(err)
+		err = yaml.Unmarshal([]byte(deployment.Manifest), &manifest)
+		if err != nil {
+			Fatal(err)
+		}
 	}
 
 	args, err := models.NewInstallerArguments(&manifest)
 	if err != nil {
-		FailOnError(err)
+		Fatal(err)
 	}
 
 	args.FillEtcdCluster()
@@ -122,98 +148,65 @@ func main() {
 	args.FillMetronAgent()
 	args.FillSyslog()
 	args.FillConsul()
+	args.FillBBS()
 
-	fillMachineIp(args, manifest, *machineIp)
-
-	fillBBS(args, manifest, *outputDir)
-	generateInstallScript(*outputDir, *args)
-	writeCerts(*outputDir, *args)
-}
-
-func fillMachineIp(args *models.InstallerArguments, manifest models.Manifest, machineIp string) {
 	if machineIp == "" {
 		consulIp := strings.Split(args.ConsulIPs, ",")[0]
 		conn, err := net.Dial("udp", consulIp+":65530")
-		FailOnError(err)
+		Fatal(err)
 		machineIp = strings.Split(conn.LocalAddr().String(), ":")[0]
 	}
-	args.MachineIp = machineIp
+	args.FillMachineIp(machineIp)
+
+	generateInstallScript(outputDir, args)
+	writeCerts(outputDir, args)
 }
 
-func fillBBS(args *models.InstallerArguments, manifest models.Manifest, outputDir string) {
-	repJob := firstRepJob(manifest)
-	properties := repJob.Properties
-	if properties.Diego.Rep.BBS == nil {
-		properties = manifest.Properties
-	}
-
-	requireSSL := properties.Diego.Rep.BBS.RequireSSL
-	// missing requireSSL implies true
-	if requireSSL == nil || *requireSSL {
-		args.BbsRequireSsl = true
-		extractBbsKeyAndCert(properties, outputDir)
-	}
-}
-
-func firstRepJob(manifest models.Manifest) models.Job {
-	jobs := manifest.Jobs
-	if len(jobs) == 0 {
-		// 2.0 Manifest
-		jobs = manifest.InstanceGroups
-	}
-
-	for _, job := range jobs {
-		if job.Properties.Diego != nil && job.Properties.Diego.Rep != nil {
-			return job
-		}
-
-	}
-	panic("no rep jobs found")
-}
-
-func extractBbsKeyAndCert(properties *models.Properties, outputDir string) {
-	for key, filename := range map[string]string{
-		properties.Diego.Rep.BBS.ClientCert: "bbs_client.crt",
-		properties.Diego.Rep.BBS.ClientKey:  "bbs_client.key",
-		properties.Diego.Rep.BBS.CACert:     "bbs_ca.crt",
-	} {
-		err := ioutil.WriteFile(path.Join(outputDir, filename), []byte(key), 0644)
-		if err != nil {
-			FailOnError(err)
-		}
-	}
-}
-
-func writeCerts(outputDir string, args models.InstallerArguments) {
+func writeCerts(outputDir string, args *models.InstallerArguments) {
 	for filename, cert := range args.Certs {
 		err := ioutil.WriteFile(path.Join(outputDir, filename), []byte(cert), 0644)
 		if err != nil {
-			FailOnError(err)
+			Fatal(err)
 		}
 	}
 }
 
-func FailOnError(err error) {
-	if err != nil {
-		panic(err)
+func Fatal(err interface{}) {
+	if err == nil {
+		return
 	}
+	_, file, line, ok := runtime.Caller(1)
+	if ok {
+		file = filepath.Base(file)
+	}
+	switch err.(type) {
+	case error, string, fmt.Stringer:
+		if ok {
+			fmt.Fprintf(os.Stderr, "Error (%s:%d): %s\n", file, line, err)
+		} else {
+			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		}
+	default:
+		if ok {
+			fmt.Fprintf(os.Stderr, "Error (%s:%d): %v\n", file, line, err)
+		} else {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
+	}
+	os.Exit(1)
 }
 
-func generateInstallScript(outputDir string, args models.InstallerArguments) {
+func generateInstallScript(outputDir string, args *models.InstallerArguments) {
 	content := strings.Replace(installBatTemplate, "\n", "\r\n", -1)
 	temp := template.Must(template.New("").Parse(content))
 	args.Zone = "windows"
 	filename := "install.bat"
 	file, err := os.OpenFile(path.Join(outputDir, filename), os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
+	Fatal(err)
 	defer file.Close()
 
 	err = temp.Execute(file, args)
-	if err != nil {
-		log.Fatal(err)
-	}
+	Fatal(err)
 }
 
 func GetDiegoDeployment(deployments []models.IndexDeployment) int {

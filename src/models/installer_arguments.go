@@ -142,3 +142,23 @@ func (a *InstallerArguments) FillConsul() {
 		a.ConsulDomain = "cf.internal"
 	}
 }
+
+func (a *InstallerArguments) FillMachineIp(machineIp string) {
+	a.MachineIp = machineIp
+}
+
+func (a *InstallerArguments) FillBBS() {
+	properties := a.repJob.Properties
+	if properties.Diego.Rep.BBS == nil {
+		properties = a.manifest.Properties
+	}
+
+	requireSSL := properties.Diego.Rep.BBS.RequireSSL
+	// missing requireSSL implies true
+	if requireSSL == nil || *requireSSL {
+		a.BbsRequireSsl = true
+		a.Certs["bbs_client.crt"] = properties.Diego.Rep.BBS.ClientCert
+		a.Certs["bbs_client.key"] = properties.Diego.Rep.BBS.ClientKey
+		a.Certs["bbs_ca.crt"] = properties.Diego.Rep.BBS.CACert
+	}
+}

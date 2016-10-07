@@ -125,6 +125,17 @@ func StartGeneratorWithURL(serverUrl string) (*gexec.Session, string) {
 	), outputDir
 }
 
+func StartGeneratorWithManifest(manifest string) (*gexec.Session, string) {
+	var err error
+	outputDir, err := ioutil.TempDir("", "XXXXXXX")
+	Expect(err).NotTo(HaveOccurred())
+
+	return StartGeneratorWithArgs(
+		"-manifest", manifest,
+		"-outputDir", outputDir,
+	), outputDir
+}
+
 func StartGeneratorWithArgs(args ...string) *gexec.Session {
 	command := exec.Command(generatePath, args...)
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -306,6 +317,27 @@ var _ = Describe("Generate", func() {
 	})
 
 	Describe("Success scenarios", func() {
+		Context("when a CF manifest is supplied", func() {
+			It("should work", func() {
+				session, outputDir = StartGeneratorWithManifest(manifestYaml)
+				Eventually(session).Should(gexec.Exit(0))
+				content, err := ioutil.ReadFile(path.Join(outputDir, "install.bat"))
+				Expect(err).NotTo(HaveOccurred())
+				script = strings.TrimSpace(string(content))
+
+				expectedContent := ExpectedContent(models.InstallerArguments{
+					ConsulRequireSSL: true,
+					SyslogHostIP:     "logs2.test.com",
+					BbsRequireSsl:    true,
+					Username:         "admin",
+					Password:         `"""password"""`,
+					ConsulDomain:     "cf.internal",
+				})
+
+				Expect(script).To(Equal(expectedContent))
+			})
+		})
+
 		Context("with default arguments", func() {
 			JustBeforeEach(func() {
 				session, outputDir = StartGeneratorWithURL(serverUrl(server))
