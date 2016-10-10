@@ -1,9 +1,9 @@
 # Greenhouse install script generator
 
 The greenhouse install script generator is a command line tool that reads
-configuration data from your BOSH director to `generate` a batch file with
-the appropriate command line parameters to install and configure
-GardenWindows.msi and DiegoWindows.msi.
+configuration data from your BOSH director or a Diego-Windows CF manifest
+to `generate` a batch file with the appropriate command line parameters
+to install and configure GardenWindows.msi and DiegoWindows.msi.
 
 ## Installation
 
@@ -14,6 +14,11 @@ See the
 for more detail.
 
 ## Usage
+
+Sample for CF Manifest:
+```
+generate -manifest cf.yml -outputDir /tmp/install.bat
+```
 
 Sample for BOSH Lite:
 ```
@@ -39,4 +44,4 @@ We use [Ginkgo](http://onsi.github.io/ginkgo/#the-ginkgo-cli) as our testing
 framework and runner. To run the install script generator tests:
 
 1. `go get github.com/onsi/ginkgo/ginkgo`
-1. `ginkgo ./src/integration/`
+1. `ginkgo ./src/integration ./src/models ./src/yaml`
