@@ -166,8 +166,8 @@ func DefaultIndexDeployment() []models.IndexDeployment {
 					Version: "0.1366.0+dev.2",
 				},
 				{
-					Name:    "garden-linux",
-					Version: "0.305.0",
+					Name:    "garden-runc",
+					Version: "1.0.3",
 				},
 			},
 		},
@@ -210,8 +210,8 @@ func AmbiguousIndexDeployment() []models.IndexDeployment {
 					Version: "0.1366.0+dev.2",
 				},
 				{
-					Name:    "garden-linux",
-					Version: "0.305.0",
+					Name:    "garden-runc",
+					Version: "1.0.3",
 				},
 			},
 		},
@@ -227,8 +227,8 @@ func AmbiguousIndexDeployment() []models.IndexDeployment {
 					Version: "0.1366.0+dev.2",
 				},
 				{
-					Name:    "garden-linux",
-					Version: "0.305.0",
+					Name:    "garden-runc",
+					Version: "1.0.3",
 				},
 			},
 		},
@@ -240,6 +240,10 @@ func ExpectedContent(args models.InstallerArguments) string {
   BBS_CA_FILE=%~dp0\bbs_ca.crt ^
   BBS_CLIENT_CERT_FILE=%~dp0\bbs_client.crt ^
   BBS_CLIENT_KEY_FILE=%~dp0\bbs_client.key ^{{ end }}
+  REP_REQUIRE_TLS={{.RepRequireTls}} ^{{if .RepRequireTls}}
+  REP_CA_CERT_FILE=%~dp0\rep_ca.crt ^
+  REP_SERVER_CERT_FILE=%~dp0\rep_server.crt ^
+  REP_SERVER_KEY_FILE=%~dp0\rep_server.key ^{{ end }}
   CONSUL_DOMAIN={{.ConsulDomain}} ^
   CONSUL_IPS=127.0.0.1 ^
   CF_ETCD_CLUSTER=http://etcd1.foo.bar:4001 ^
@@ -600,6 +604,26 @@ var _ = Describe("Generate", func() {
 						Username:         "admin",
 						Password:         `"""password"""`,
 						ConsulDomain:     "cf.internal",
+					})
+					Expect(script).To(Equal(expectedContent))
+				})
+			})
+
+			Context("When the rep has requireTls", func() {
+				BeforeEach(func() {
+					manifestYaml = "two_point_oh_manifest_rep_tls.yml"
+				})
+
+				It("picks up rep tls properties from instance_groups", func() {
+					expectedContent := ExpectedContent(models.InstallerArguments{
+						ConsulRequireSSL:  true,
+						SyslogHostIP:      "logs2.test.com",
+						BbsRequireSsl:     true,
+						Username:          "admin",
+						Password:          `"""password"""`,
+						ConsulDomain:      "cf.internal",
+						RepRequireTls:     true,
+						RepSkipCertVerify: true,
 					})
 					Expect(script).To(Equal(expectedContent))
 				})

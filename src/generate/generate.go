@@ -32,6 +32,10 @@ const (
   BBS_CA_FILE=%~dp0\bbs_ca.crt ^
   BBS_CLIENT_CERT_FILE=%~dp0\bbs_client.crt ^
   BBS_CLIENT_KEY_FILE=%~dp0\bbs_client.key ^{{ end }}
+  REP_REQUIRE_TLS={{.RepRequireTls}} ^{{if .RepRequireTls}}
+  REP_CA_CERT_FILE=%~dp0\rep_ca.crt ^
+  REP_SERVER_CERT_FILE=%~dp0\rep_server.crt ^
+  REP_SERVER_KEY_FILE=%~dp0\rep_server.key ^{{ end }}
   CONSUL_DOMAIN={{.ConsulDomain}} ^
   CONSUL_IPS={{.ConsulIPs}} ^
   CF_ETCD_CLUSTER=http://{{.EtcdCluster}}:4001 ^
@@ -149,6 +153,7 @@ func main() {
 	args.FillSyslog()
 	args.FillConsul()
 	args.FillBBS()
+	args.FillRep()
 
 	if machineIp == "" {
 		consulIp := strings.Split(args.ConsulIPs, ",")[0]
@@ -218,7 +223,7 @@ func GetDiegoDeployment(deployments []models.IndexDeployment) int {
 			releases[rel.Name] = true
 		}
 
-		if releases["cf"] && releases["diego"] && releases["garden-linux"] {
+		if releases["cf"] && releases["diego"] && releases["garden-runc"] {
 			if deploymentIndex != -1 {
 				return -1
 			}

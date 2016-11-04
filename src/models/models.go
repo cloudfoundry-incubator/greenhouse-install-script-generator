@@ -59,8 +59,12 @@ type BBSProperties struct {
 }
 
 type Rep struct {
-	Zone string         `yaml:"zone"`
-	BBS  *BBSProperties `yaml:"bbs"`
+	Zone       string         `yaml:"zone"`
+	BBS        *BBSProperties `yaml:"bbs"`
+	RequireTls *bool          `yaml:"require_tls"`
+	CACert     string         `yaml:"ca_cert"`
+	ServerCert string         `yaml:"server_cert"`
+	ServerKey  string         `yaml:"server_key"`
 }
 
 type DiegoProperties struct {

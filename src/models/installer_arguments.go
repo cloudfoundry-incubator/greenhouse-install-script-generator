@@ -11,22 +11,24 @@ import (
 )
 
 type InstallerArguments struct {
-	repJob           *Job
-	manifest         *Manifest
-	ConsulRequireSSL bool
-	ConsulIPs        string
-	EtcdCluster      string
-	Zone             string
-	SharedSecret     string
-	Username         string
-	Password         string
-	SyslogHostIP     string
-	SyslogPort       string
-	BbsRequireSsl    bool
-	MachineIp        string
-	MetronPreferTLS  bool
-	ConsulDomain     string
-	Certs            map[string]string
+	repJob            *Job
+	manifest          *Manifest
+	ConsulRequireSSL  bool
+	ConsulIPs         string
+	EtcdCluster       string
+	Zone              string
+	SharedSecret      string
+	Username          string
+	Password          string
+	SyslogHostIP      string
+	SyslogPort        string
+	BbsRequireSsl     bool
+	RepRequireTls     bool
+	RepSkipCertVerify bool
+	MachineIp         string
+	MetronPreferTLS   bool
+	ConsulDomain      string
+	Certs             map[string]string
 }
 
 func NewInstallerArguments(manifest *Manifest) (*InstallerArguments, error) {
@@ -160,5 +162,20 @@ func (a *InstallerArguments) FillBBS() {
 		a.Certs["bbs_client.crt"] = properties.Diego.Rep.BBS.ClientCert
 		a.Certs["bbs_client.key"] = properties.Diego.Rep.BBS.ClientKey
 		a.Certs["bbs_ca.crt"] = properties.Diego.Rep.BBS.CACert
+	}
+}
+func (a *InstallerArguments) FillRep() {
+	properties := a.repJob.Properties
+	if properties.Diego.Rep.BBS == nil {
+		properties = a.manifest.Properties
+	}
+
+	requireTLS := properties.Diego.Rep.RequireTls
+	// missing requireTLS implies true
+	if requireTLS != nil && *requireTLS {
+		a.RepRequireTls = true
+		a.Certs["rep_ca.crt"] = properties.Diego.Rep.CACert
+		a.Certs["rep_server.key"] = properties.Diego.Rep.ServerKey
+		a.Certs["rep_server.crt"] = properties.Diego.Rep.ServerCert
 	}
 }
