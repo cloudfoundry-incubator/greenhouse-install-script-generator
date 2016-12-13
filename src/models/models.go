@@ -30,7 +30,7 @@ func (m *Manifest) FirstRepJob() (*Job, error) {
 	}
 
 	for _, job := range jobs {
-		if job.Properties.Diego != nil && job.Properties.Diego.Rep != nil {
+		if job.Properties != nil && job.Properties.Diego != nil && job.Properties.Diego.Rep != nil {
 			return &job, nil
 		}
 	}
