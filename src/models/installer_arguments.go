@@ -72,7 +72,12 @@ func (a *InstallerArguments) FillMetronAgent() {
 	}
 
 	if properties != nil && properties.MetronAgent != nil && properties.MetronAgent.PreferredProtocol != nil {
-		if *properties.MetronAgent.PreferredProtocol == "tls" {
+		if properties.Loggregator.Tls.Metron.Cert != "" {
+			a.MetronPreferTLS = true
+			a.Certs["metron_agent.crt"] = properties.Loggregator.Tls.Metron.Cert
+			a.Certs["metron_agent.key"] = properties.Loggregator.Tls.Metron.Key
+			a.Certs["metron_ca.crt"] = properties.Loggregator.Tls.CACert
+		} else if *properties.MetronAgent.PreferredProtocol == "tls" {
 			a.MetronPreferTLS = true
 			if properties.Loggregator.Tls.CACert != "" {
 				a.Certs["metron_agent.crt"] = properties.MetronAgent.Tls.ClientCert

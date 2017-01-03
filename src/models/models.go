@@ -78,12 +78,18 @@ type LoggregatorProperties struct {
 	Tls Tls `yaml:"tls"`
 }
 type Tls struct {
-	CA         string `yaml:"ca"`
-	CACert     string `yaml:"ca_cert"`
-	ClientCert string `yaml:"client_cert"`
-	ClientKey  string `yaml:"client_key"`
-	Cert       string `yaml:"cert"`
-	Key        string `yaml:"key"`
+	CA         string    `yaml:"ca"`
+	CACert     string    `yaml:"ca_cert"`
+	ClientCert string    `yaml:"client_cert"`
+	ClientKey  string    `yaml:"client_key"`
+	Cert       string    `yaml:"cert"`
+	Key        string    `yaml:"key"`
+	Metron     MetronTls `yaml:"metron"`
+}
+
+type MetronTls struct {
+	Cert string `yaml:"cert"`
+	Key  string `yaml:"key"`
 }
 
 type MetronEndpoint struct {

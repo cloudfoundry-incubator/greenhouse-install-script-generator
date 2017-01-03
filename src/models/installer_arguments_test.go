@@ -102,7 +102,28 @@ var _ = Describe("InstallerArguments", func() {
 			Expect(args.MetronPreferTLS).To(BeFalse())
 		})
 
-		Context("new style loggregator properties", func() {
+		Context("when metron TLS properties are nested under Loggregator", func() {
+			It("copies certs from the manifest", func() {
+				tls := "udp"
+				manifest.Properties.MetronAgent.PreferredProtocol = &tls
+				manifest.Properties.Loggregator.Tls = Tls{CACert: "cacert"}
+				manifest.Properties.Loggregator.Tls.Metron = MetronTls{
+					Key:  "clientkey",
+					Cert: "clientcert",
+				}
+
+				args, err := NewInstallerArguments(&manifest)
+				Expect(err).To(BeNil())
+
+				args.FillMetronAgent()
+				Expect(args.Certs["metron_agent.crt"]).To(Equal("clientcert"))
+				Expect(args.Certs["metron_agent.key"]).To(Equal("clientkey"))
+				Expect(args.Certs["metron_ca.crt"]).To(Equal("cacert"))
+				Expect(args.MetronPreferTLS).To(BeTrue())
+			})
+		})
+
+		Context("when metron TLS properties are nested under MetronAgent", func() {
 			It("copies certs from the manifest when TLS is enabled", func() {
 				tls := "tls"
 				manifest.Properties.MetronAgent.PreferredProtocol = &tls
@@ -123,7 +144,7 @@ var _ = Describe("InstallerArguments", func() {
 			})
 		})
 
-		Context("old style loggregator properties", func() {
+		Context("when metron TLS properties are nested under MetronAgent.TlsClient", func() {
 			It("copies certs from the manifest when TLS is enabled", func() {
 				tls := "tls"
 				manifest.Properties.MetronAgent.PreferredProtocol = &tls
