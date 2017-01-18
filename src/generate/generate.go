@@ -38,7 +38,7 @@ const (
   REP_SERVER_KEY_FILE=%~dp0\rep_server.key ^{{ end }}
   CONSUL_DOMAIN={{.ConsulDomain}} ^
   CONSUL_IPS={{.ConsulIPs}} ^
-  CF_ETCD_CLUSTER=http://{{.EtcdCluster}}:4001 ^
+  CF_ETCD_CLUSTER=http://etcd-server-0.node.cf.internal:4001 ^
   STACK=windows2012R2 ^
   REDUNDANCY_ZONE={{.Zone}} ^
   LOGGREGATOR_SHARED_SECRET={{.SharedSecret}} ^

@@ -246,7 +246,7 @@ func ExpectedContent(args models.InstallerArguments) string {
   REP_SERVER_KEY_FILE=%~dp0\rep_server.key ^{{ end }}
   CONSUL_DOMAIN={{.ConsulDomain}} ^
   CONSUL_IPS=127.0.0.1 ^
-  CF_ETCD_CLUSTER=http://etcd1.foo.bar:4001 ^
+  CF_ETCD_CLUSTER=http://etcd-server-0.node.cf.internal:4001 ^
   STACK=windows2012R2 ^
   REDUNDANCY_ZONE=windows ^
   LOGGREGATOR_SHARED_SECRET=secret123 ^
