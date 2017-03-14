@@ -147,7 +147,6 @@ func main() {
 		Fatal(err)
 	}
 
-	args.FillEtcdCluster()
 	args.FillSharedSecret()
 	args.FillMetronAgent()
 	args.FillSyslog()

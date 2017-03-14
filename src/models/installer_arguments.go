@@ -43,15 +43,6 @@ func NewInstallerArguments(manifest *Manifest) (*InstallerArguments, error) {
 	}, nil
 }
 
-func (a *InstallerArguments) FillEtcdCluster() {
-	properties := a.repJob.Properties
-	if properties.Loggregator == nil {
-		properties = a.manifest.Properties
-	}
-
-	a.EtcdCluster = properties.Loggregator.Etcd.Machines[0]
-}
-
 func (a *InstallerArguments) FillSharedSecret() {
 	properties := a.repJob.Properties
 	if properties.MetronEndpoint == nil && properties.LoggregatorEndpoint == nil {
