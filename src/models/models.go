@@ -37,6 +37,21 @@ func (m *Manifest) FirstRepJob() (*Job, error) {
 	return nil, errors.New("no rep job found")
 }
 
+func (m *Manifest) FirstConsulJob() (*Job, error) {
+	jobs := m.Jobs
+	if len(jobs) == 0 {
+		// 2.0 Manifest
+		jobs = m.InstanceGroups
+	}
+
+	for _, job := range jobs {
+		if job.Properties != nil && job.Properties.Consul != nil && job.Properties.Consul.CACert != "" {
+			return &job, nil
+		}
+	}
+	return nil, errors.New("no consul job found")
+}
+
 type ConsulProperties struct {
 	RequireSSL  *string  `yaml:"require_ssl"`
 	CACert      string   `yaml:"ca_cert"`

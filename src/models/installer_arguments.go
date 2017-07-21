@@ -12,6 +12,7 @@ import (
 
 type InstallerArguments struct {
 	repJob            *Job
+	consulJob         *Job
 	manifest          *Manifest
 	ConsulRequireSSL  bool
 	ConsulIPs         string
@@ -36,10 +37,12 @@ func NewInstallerArguments(manifest *Manifest) (*InstallerArguments, error) {
 	if err != nil {
 		return nil, err
 	}
+	firstConsulJob, _ := manifest.FirstConsulJob()
 	return &InstallerArguments{
-		repJob:   firstRepJob,
-		manifest: manifest,
-		Certs:    make(map[string]string),
+		repJob:    firstRepJob,
+		consulJob: firstConsulJob,
+		manifest:  manifest,
+		Certs:     make(map[string]string),
 	}, nil
 }
 
@@ -110,7 +113,12 @@ func stringToEncryptKey(str string) string {
 func (a *InstallerArguments) FillConsul() {
 	properties := a.repJob.Properties
 	if properties.Consul == nil {
-		properties = a.manifest.Properties
+		if a.manifest.Properties != nil {
+			properties = a.manifest.Properties
+		}
+	}
+	if properties.Consul == nil {
+		properties.Consul = a.consulJob.Properties.Consul
 	}
 
 	consuls := properties.Consul.Agent.Servers.Lan

@@ -1,0 +1,40 @@
+instance_groups:
+- name: diego
+  networks: [name: diego1]
+  properties:
+      diego:
+        rep:
+          require_tls: true
+          ca_cert: REP_CA_CERT
+          server_cert: REP_SERVER_CERT
+          server_key: REP_SERVER_KEY
+          bbs:
+            ca_cert: BBS_CA_CERT
+            client_cert: BBS_CLIENT_CERT
+            client_key: BBS_CLIENT_KEY
+            require_ssl: true
+          zone:
+            zone1
+      loggregator:
+        etcd:
+          machines:
+            - etcd1.foo.bar
+      metron_endpoint:
+        shared_secret: secret123
+      syslog_daemon_config:
+        address: logs2.test.com
+        port: 11111
+- name: consul
+  networks: [name: diego1]
+  properties:
+      consul:
+        ca_cert: CONSUL_CA_CERT
+        require_ssl: true
+        agent_cert: CONSUL_AGENT_CERT
+        agent_key: CONSUL_AGENT_KEY
+        encrypt_keys:
+          - CONSUL_ENCRYPT
+        agent:
+          servers:
+            lan:
+              - 127.0.0.1

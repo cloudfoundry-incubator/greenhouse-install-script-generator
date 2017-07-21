@@ -591,6 +591,26 @@ var _ = Describe("Generate", func() {
 				})
 			})
 
+			Context("BOSH 2.0 manifests and links", func() {
+				BeforeEach(func() {
+					manifestYaml = "consul_links_manifest.yml"
+				})
+
+				It("picks up properties from instance_groups under consul", func() {
+					expectedContent := ExpectedContent(models.InstallerArguments{
+						ConsulRequireSSL:  true,
+						SyslogHostIP:      "logs2.test.com",
+						BbsRequireSsl:     true,
+						Username:          "admin",
+						Password:          `"""password"""`,
+						ConsulDomain:      "cf.internal",
+						RepRequireTls:     true,
+						RepSkipCertVerify: true,
+					})
+					Expect(script).To(Equal(expectedContent))
+				})
+			})
+
 			Context("BOSH 2.0 manifests", func() {
 				BeforeEach(func() {
 					manifestYaml = "two_point_oh_manifest.yml"
